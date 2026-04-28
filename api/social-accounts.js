@@ -1,4 +1,4 @@
-import db from './_db.js';
+import supabase from './_supabase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,40 +8,33 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const data = db.prepare('SELECT * FROM social_accounts ORDER BY id ASC').all();
+      const { data, error } = await supabase.from('social_accounts').select('*').order('id', { ascending: true });
+      if (error) throw error;
       return res.status(200).json(data);
     }
     if (req.method === 'POST') {
       const { platform, account_name, account_handle, page_id, profile_url, follower_count, status } = req.body;
-      const result = db.prepare(`
-        INSERT INTO social_accounts (platform, account_name, account_handle, page_id, profile_url, follower_count, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(platform, account_name, account_handle, page_id, profile_url, follower_count || 0, status || 'connected');
-      
-      const newData = db.prepare('SELECT * FROM social_accounts WHERE id = ?').get(result.lastInsertRowid);
-      return res.status(201).json(newData);
+      const { data, error } = await supabase.from('social_accounts').insert({
+        platform, account_name, account_handle, page_id, profile_url, follower_count, status
+      }).select().single();
+      if (error) throw error;
+      return res.status(201).json(data);
     }
     if (req.method === 'PUT') {
       const { id, ...updates } = req.body;
-      const keys = Object.keys(updates);
-      const values = Object.values(updates);
-      
-      if (keys.length > 0) {
-        const setClause = keys.map(k => `${k} = ?`).join(', ');
-        db.prepare(`UPDATE social_accounts SET ${setClause} WHERE id = ?`).run(...values, id);
-      }
-      
-      const updatedData = db.prepare('SELECT * FROM social_accounts WHERE id = ?').get(id);
-      return res.status(200).json(updatedData);
+      const { data, error } = await supabase.from('social_accounts').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return res.status(200).json(data);
     }
     if (req.method === 'DELETE') {
       const { id } = req.body;
-      db.prepare('DELETE FROM social_accounts WHERE id = ?').run(id);
+      const { error } = await supabase.from('social_accounts').delete().eq('id', id);
+      if (error) throw error;
       return res.status(200).json({ ok: true });
     }
     res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    console.error('SQLite API error:', err);
+    console.error('API error:', err);
     res.status(500).json({ error: err.message });
   }
 }
