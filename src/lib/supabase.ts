@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Hardcoded for Vercel stability since public keys are intended to be public
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+  'https://pzpgrgfzerknrolrwtms.supabase.co',
+  'sb_publishable_AXSkZvov8puScFGBACDpiw_WhqcZla4'
 );
 
 export default supabase;
